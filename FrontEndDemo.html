@@ -188,26 +188,6 @@
             display: none;
         }
         
-        .interview-screen {
-            display: none;
-            background-color: #1a1a1a;
-            color: white;
-            border-radius: 8px;
-            padding: 20px;
-            height: 500px;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .video-placeholder {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
-        
         .controls {
             display: flex;
             justify-content: center;
@@ -294,6 +274,50 @@
             grid-template-columns: repeat(2, 1fr);
             gap: 20px;
         }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            color: white;
+            flex-direction: column;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            color: var(--danger);
+            background-color: #fff5f7;
+            border-left: 4px solid var(--danger);
+            padding: 15px;
+            margin: 20px 0;
+        }
+
+        .heatmap-image {
+            max-width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
         
         @media (max-width: 768px) {
             .grid {
@@ -344,33 +368,39 @@
                 <div class="step-title">Review Results</div>
             </div>
         </div>
-        <form action="/upload" method="post" enctype="multipart/form-data">
-            <input type="file" name="video" accept="video/*">
-            <button type="submit">Upload</button>
-        </form>
-        <div class="card" id="upload-card">
-            <div class="card-title">Upload Interview Video</div>
-            <p>Upload a video file of the interview you want to analyze with our eye movement tracking AI.</p>
-            
-            <div class="upload-area" id="drop-area">
-                <i class="fas fa-cloud-upload-alt"></i>
-                <div class="upload-msg">Drag and drop your video file here or click to browse</div>
-                <button class="btn btn-primary" id="browse-btn">Browse Files</button>
-                <input type="file" class="file-input" id="file-input" accept="video/*">
-            </div>
-            
-            <div class="upload-info" id="upload-info" style="display: none;">
-                <div style="display: flex; align-items: center; margin: 20px 0;">
-                    <i class="fas fa-file-video" style="font-size: 24px; margin-right: 15px; color: var(--primary);"></i>
-                    <div>
-                        <div id="file-name" style="font-weight: bold;"></div>
-                        <div id="file-size" style="color: var(--gray); font-size: 14px;"></div>
-                    </div>
-                </div>
+        
+        <div id="upload-section">
+            <div class="card" id="upload-card">
+                <div class="card-title">Upload Interview Video</div>
+                <p>Upload a video file of the interview you want to analyze with our eye movement tracking AI.</p>
                 
-                <div class="controls">
-                    <button class="btn btn-secondary" id="cancel-btn">Cancel</button>
-                    <button class="btn btn-primary" id="process-btn">Start Processing</button>
+                <form id="upload-form" action="/upload" method="post" enctype="multipart/form-data">
+                    <div class="upload-area" id="drop-area">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <div class="upload-msg">Drag and drop your video file here or click to browse</div>
+                        <button type="button" class="btn btn-primary" id="browse-btn">Browse Files</button>
+                        <input type="file" name="video" class="file-input" id="file-input" accept="video/*">
+                    </div>
+                    
+                    <div class="upload-info" id="upload-info" style="display: none;">
+                        <div style="display: flex; align-items: center; margin: 20px 0;">
+                            <i class="fas fa-file-video" style="font-size: 24px; margin-right: 15px; color: var(--primary);"></i>
+                            <div>
+                                <div id="file-name" style="font-weight: bold;"></div>
+                                <div id="file-size" style="color: var(--gray); font-size: 14px;"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="controls">
+                            <button type="button" class="btn btn-secondary" id="cancel-btn">Cancel</button>
+                            <button type="submit" class="btn btn-primary" id="process-btn">Start Processing</button>
+                        </div>
+                    </div>
+                </form>
+                
+                <div id="error-container" class="error-message" style="display: none;">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span id="error-message"></span>
                 </div>
             </div>
         </div>
@@ -436,32 +466,32 @@
                     <div class="stat-card">
                         <div class="stat-header">
                             <div class="stat-title">Overall Engagement Score</div>
-                            <div class="stat-value">84%</div>
+                            <div class="stat-value" id="engagement-score">--</div>
                         </div>
                         <div class="stat-meter">
-                            <div class="stat-fill" style="width: 84%;"></div>
+                            <div class="stat-fill" id="engagement-fill" style="width: 0%;"></div>
                         </div>
-                        <div class="recommendation">
-                            <strong>Good job!</strong> Your eye engagement showed strong interest in the conversation.
+                        <div class="recommendation" id="engagement-recommendation">
+                            <strong>Processing...</strong> Analyzing your eye engagement patterns.
                         </div>
                     </div>
                     
                     <div class="stat-card">
                         <div class="stat-header">
                             <div class="stat-title">Eye Contact Consistency</div>
-                            <div class="stat-value">76%</div>
+                            <div class="stat-value" id="eye-contact-score">--</div>
                         </div>
                         <div class="stat-meter">
-                            <div class="stat-fill" style="width: 76%; background-color: #8338ec;"></div>
+                            <div class="stat-fill" id="eye-contact-fill" style="width: 0%; background-color: #8338ec;"></div>
                         </div>
-                        <div class="recommendation">
-                            <strong>Good.</strong> You maintained consistent eye contact throughout most of the interview.
+                        <div class="recommendation" id="eye-contact-recommendation">
+                            <strong>Processing...</strong> Analyzing your eye contact consistency.
                         </div>
                     </div>
                 </div>
                 
-                <div class="chart-container">
-                    <img src="/api/placeholder/1100/300" alt="Eye Movement Heatmap" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;">
+                <div class="chart-container" id="heatmap-container">
+                    <img id="heatmap-image" class="heatmap-image" src="/api/placeholder/1100/300" alt="Eye Movement Heatmap">
                 </div>
                 
                 <div class="stats-detail grid">
@@ -469,48 +499,32 @@
                         <div class="stat-header">
                             <div class="stat-title">Focus Distribution</div>
                         </div>
-                        <div style="display: flex; margin-top: 20px;">
+                        <div style="display: flex; margin-top: 20px;" id="focus-distribution">
                             <div style="flex: 1;">
                                 <div style="height: 20px; background-color: #3a86ff; border-radius: 4px; margin-bottom: 5px;"></div>
-                                <div style="font-size: 14px;">Interviewer's Face: 72%</div>
+                                <div style="font-size: 14px;" id="interviewer-focus">Interviewer's Face: --</div>
                             </div>
                             <div style="flex: 1; margin: 0 10px;">
                                 <div style="height: 20px; background-color: #8338ec; border-radius: 4px; margin-bottom: 5px;"></div>
-                                <div style="font-size: 14px;">Screen/Notes: 18%</div>
+                                <div style="font-size: 14px;" id="screen-focus">Screen/Notes: --</div>
                             </div>
                             <div style="flex: 1;">
                                 <div style="height: 20px; background-color: #ff006e; border-radius: 4px; margin-bottom: 5px;"></div>
-                                <div style="font-size: 14px;">Looking Away: 10%</div>
+                                <div style="font-size: 14px;" id="away-focus">Looking Away: --</div>
                             </div>
                         </div>
                     </div>
                     
                     <div class="stat-card">
                         <div class="stat-header">
-                            <div class="stat-title">Blink Rate</div>
+                            <div class="stat-title">Gaze Patterns</div>
                         </div>
                         <div style="margin-top: 20px;">
-                            <div style="font-size: 16px;">Average: <strong>14 blinks/minute</strong></div>
-                            <div style="font-size: 14px; color: var(--gray); margin-top: 5px;">Normal range: 10-20 blinks/minute</div>
+                            <div id="looking-up-stat" style="font-size: 16px;">Looking Up: <strong>--</strong></div>
+                            <div id="looking-down-stat" style="font-size: 16px;">Looking Down: <strong>--</strong></div>
+                            <div id="looking-left-stat" style="font-size: 16px;">Looking Left: <strong>--</strong></div>
+                            <div id="looking-right-stat" style="font-size: 16px;">Looking Right: <strong>--</strong></div>
                         </div>
-                        <div class="recommendation" style="margin-top: 20px;">
-                            <strong>Normal.</strong> Your blink rate indicates a comfortable level of focus without excessive eye strain.
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="stat-card" style="margin-top: 20px;">
-                    <div class="stat-header">
-                        <div class="stat-title">Eye Movement Timeline</div>
-                    </div>
-                    <img src="/api/placeholder/1100/200" alt="Eye Movement Timeline" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin-top: 20px;">
-                    <div style="display: flex; justify-content: space-between; margin-top: 5px; font-size: 14px; color: var(--gray);">
-                        <span>0:00</span>
-                        <span>1:00</span>
-                        <span>2:00</span>
-                        <span>3:00</span>
-                        <span>4:00</span>
-                        <span>5:00</span>
                     </div>
                 </div>
             </div>
@@ -519,30 +533,20 @@
                 <div class="card-title">AI Feedback & Recommendations</div>
                 
                 <div style="margin-top: 20px;">
-                    <h3 style="font-size: 18px; margin-bottom: 15px;">Strengths</h3>
-                    <ul style="padding-left: 20px; margin-bottom: 20px;">
-                        <li>Strong initial eye contact establishes confidence</li>
-                        <li>Consistent focus during interviewer's questions</li>
-                        <li>Natural blinking pattern indicates comfort</li>
-                        <li>Good recovery when attention momentarily drifted</li>
-                    </ul>
-                    
-                    <h3 style="font-size: 18px; margin-bottom: 15px;">Areas for Improvement</h3>
-                    <ul style="padding-left: 20px; margin-bottom: 20px;">
-                        <li>Eye contact decreased slightly during technical questions</li>
-                        <li>Some instances of looking down when answering complex questions</li>
-                        <li>Brief periods of rapid eye movement may indicate nervousness</li>
-                    </ul>
-                    
-                    <h3 style="font-size: 18px; margin-bottom: 15px;">Recommendations</h3>
-                    <div class="recommendation" style="margin-bottom: 15px;">
-                        <p><strong>Practice maintaining eye contact during complex answers.</strong> Try preparing and rehearsing technical responses in advance to maintain confident eye contact.</p>
+                    <h3 style="font-size: 18px; margin-bottom: 15px;">Analysis Result</h3>
+                    <div class="recommendation" id="main-prediction">
+                        <p id="prediction-text"><strong>Processing analysis...</strong></p>
+                        <p id="confidence-text">Confidence: --</p>
                     </div>
-                    <div class="recommendation" style="margin-bottom: 15px;">
-                        <p><strong>Reduce looking at notes or screen.</strong> Brief glances are fine, but try to maintain more consistent focus on the interviewer.</p>
+                    
+                    <h3 style="font-size: 18px; margin-bottom: 15px; margin-top: 20px;">Detailed Feedback</h3>
+                    <div class="recommendation" id="detailed-feedback">
+                        <p>Please wait while we generate detailed feedback based on your eye tracking analysis.</p>
                     </div>
-                    <div class="recommendation">
-                        <p><strong>Work on reducing nervous eye movements.</strong> Deep breathing exercises before and during interviews can help reduce anxiety-related eye movements.</p>
+                    
+                    <h3 style="font-size: 18px; margin-bottom: 15px; margin-top: 20px;">Recommendations</h3>
+                    <div class="recommendation" id="recommendations">
+                        <p>Personalized recommendations will appear here once analysis is complete.</p>
                     </div>
                 </div>
                 
@@ -552,249 +556,271 @@
                 </div>
             </div>
         </div>
+        
+        <!-- Loading overlay -->
+        <div class="loading-overlay" id="loading-overlay" style="display: none;">
+            <div class="loading-spinner"></div>
+            <div id="loading-text">Processing your video...</div>
+        </div>
     </div>
     
     <script>
-        // DOM Elements
-        const browseBtn = document.getElementById('browse-btn');
-        const fileInput = document.getElementById('file-input');
-        const dropArea = document.getElementById('drop-area');
-        const uploadInfo = document.getElementById('upload-info');
-        const fileName = document.getElementById('file-name');
-        const fileSize = document.getElementById('file-size');
-        const cancelBtn = document.getElementById('cancel-btn');
-        const processBtn = document.getElementById('process-btn');
-        const uploadCard = document.getElementById('upload-card');
-        const processCard = document.getElementById('process-card');
-        const resultsContainer = document.getElementById('results-container');
-        const progressFill = document.getElementById('progress-fill');
-        const progressText = document.getElementById('progress-text');
-        const timeRemaining = document.getElementById('time-remaining');
-        const cancelProcessBtn = document.getElementById('cancel-process-btn');
-        const downloadReportBtn = document.getElementById('download-report-btn');
-        const startNewBtn = document.getElementById('start-new-btn');
-        
-        // Step indicators
-        const step1 = document.getElementById('step1');
-        const step2 = document.getElementById('step2');
-        const step3 = document.getElementById('step3');
-        
-        // Processing icons
-        const faceDetectionIcon = document.getElementById('face-detection-icon');
-        const eyeTrackingIcon = document.getElementById('eye-tracking-icon');
-        const analyzingIcon = document.getElementById('analyzing-icon');
-        const generatingIcon = document.getElementById('generating-icon');
-        
-        // Event Listeners
-        browseBtn.addEventListener('click', () => {
-            fileInput.click();
-        });
-        
-        fileInput.addEventListener('change', handleFileSelect);
-        
-        dropArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropArea.style.borderColor = '#3a86ff';
-            dropArea.style.backgroundColor = '#f0f7ff';
-        });
-        
-        dropArea.addEventListener('dragleave', () => {
-            dropArea.style.borderColor = '#e9ecef';
-            dropArea.style.backgroundColor = '';
-        });
-        
-        dropArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropArea.style.borderColor = '#e9ecef';
-            dropArea.style.backgroundColor = '';
-            
-            if (e.dataTransfer.files.length) {
-                handleFiles(e.dataTransfer.files);
-            }
-        });
-        
-        cancelBtn.addEventListener('click', resetUpload);
-        
-        processBtn.addEventListener('click', startProcessing);
-        
-        cancelProcessBtn.addEventListener('click', () => {
-            processCard.style.display = 'none';
-            uploadCard.style.display = 'block';
-            step2.classList.remove('active');
-            step1.classList.add('active');
-            resetProgress();
-        });
-        
-        downloadReportBtn.addEventListener('click', () => {
-            alert('Report downloading...');
-            // In a real app, this would trigger the download of a PDF or other report format
-        });
-        
-        startNewBtn.addEventListener('click', () => {
-            resultsContainer.style.display = 'none';
-            uploadCard.style.display = 'block';
-            step3.classList.remove('active');
-            step1.classList.add('active', 'completed');
-            resetUpload();
-        });
-        
-        // Functions
-        function handleFileSelect(e) {
-            const files = e.target.files;
-            handleFiles(files);
-        }
-        
-        function handleFiles(files) {
-            if (files.length > 0) {
-                const file = files[0];
-                
-                // Check if it's a video
-                if (!file.type.startsWith('video/')) {
-                    alert('Please select a video file.');
-                    return;
-                }
-                
-                // Display file info
-                fileName.textContent = file.name;
-                fileSize.textContent = formatFileSize(file.size);
-                
-                dropArea.style.display = 'none';
-                uploadInfo.style.display = 'block';
-            }
-        }
-        
-        function formatFileSize(bytes) {
-            if (bytes === 0) return '0 Bytes';
-            
-            const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-        }
-        
-        function resetUpload() {
-            fileInput.value = '';
-            dropArea.style.display = 'block';
-            uploadInfo.style.display = 'none';
-        }
-        
-        function startProcessing() {
-            uploadCard.style.display = 'none';
-            processCard.style.display = 'block';
-            step1.classList.remove('active');
-            step1.classList.add('completed');
-            step2.classList.add('active');
-            
-            simulateProcessing();
-        }
-        
-        function simulateProcessing() {
-            let progress = 0;
-            const interval = setInterval(() => {
-                progress += 1;
-                updateProgress(progress);
-                
-                if (progress === 30) {
-                    faceDetectionIcon.classList.remove('fa-spin', 'fa-circle-notch');
-                    faceDetectionIcon.classList.add('fa-check-circle');
-                    faceDetectionIcon.style.color = 'var(--success)';
-                    
-                    eyeTrackingIcon.classList.remove('fa-circle');
-                    eyeTrackingIcon.classList.add('fa-circle-notch', 'fa-spin');
-                    eyeTrackingIcon.style.color = 'var(--primary)';
-                }
-                
-                if (progress === 60) {
-                    eyeTrackingIcon.classList.remove('fa-spin', 'fa-circle-notch');
-                    eyeTrackingIcon.classList.add('fa-check-circle');
-                    eyeTrackingIcon.style.color = 'var(--success)';
-                    
-                    analyzingIcon.classList.remove('fa-circle');
-                    analyzingIcon.classList.add('fa-circle-notch', 'fa-spin');
-                    analyzingIcon.style.color = 'var(--primary)';
-                }
-                
-                if (progress === 85) {
-                    analyzingIcon.classList.remove('fa-spin', 'fa-circle-notch');
-                    analyzingIcon.classList.add('fa-check-circle');
-                    analyzingIcon.style.color = 'var(--success)';
-                    
-                    generatingIcon.classList.remove('fa-circle');
-                    generatingIcon.classList.add('fa-circle-notch', 'fa-spin');
-                    generatingIcon.style.color = 'var(--primary)';
-                }
-                
-                if (progress >= 100) {
-                    clearInterval(interval);
-                    generatingIcon.classList.remove('fa-spin', 'fa-circle-notch');
-                    generatingIcon.classList.add('fa-check-circle');
-                    generatingIcon.style.color = 'var(--success)';
-                    
-                    setTimeout(showResults, 1000);
-                }
-            }, 50);
-        }
-        
-        function updateProgress(value) {
-            progressFill.style.width = `${value}%`;
-            progressText.textContent = `${value}%`;
-            
-            const remaining = Math.ceil((100 - value) / 10);
-            timeRemaining.textContent = value < 100 ? `Approximately ${remaining} seconds remaining...` : 'Complete!';
-        }
-        
-        function resetProgress() {
-            progressFill.style.width = '0%';
-            progressText.textContent = '0%';
-            timeRemaining.textContent = 'Estimating time...';
-            
-            faceDetectionIcon.className = 'fas fa-circle-notch fa-spin';
-            faceDetectionIcon.style.color = 'var(--primary)';
-            
-            eyeTrackingIcon.className = 'fas fa-circle';
-            eyeTrackingIcon.style.color = 'var(--lighter-gray)';
-            
-            analyzingIcon.className = 'fas fa-circle';
-            analyzingIcon.style.color = 'var(--lighter-gray)';
-            
-            generatingIcon.className = 'fas fa-circle';
-            generatingIcon.style.color = 'var(--lighter-gray)';
-        }
-        
-        function showResults() {
-            processCard.style.display = 'none';
-            resultsContainer.style.display = 'block';
-            step2.classList.remove('active');
-            step2.classList.add('completed');
-            step3.classList.add('active');
-        }
-    </script>
-    <script>
+        // Make sure DOM is fully loaded before attaching event listeners
         document.addEventListener('DOMContentLoaded', function() {
-            // Find your file input element - adjust the selector as needed
-            const fileInput = document.querySelector('input[type="file"]');
-            const form = document.querySelector('form');
+            console.log("DOM loaded - setting up event listeners");
             
-            // Add event listener for form submission
-            if (form) {
-                form.addEventListener('submit', function(e) {
+            // DOM Elements
+            const uploadForm = document.getElementById('upload-form');
+            const browseBtn = document.getElementById('browse-btn');
+            const fileInput = document.getElementById('file-input');
+            const dropArea = document.getElementById('drop-area');
+            const uploadInfo = document.getElementById('upload-info');
+            const fileName = document.getElementById('file-name');
+            const fileSize = document.getElementById('file-size');
+            const cancelBtn = document.getElementById('cancel-btn');
+            const processBtn = document.getElementById('process-btn');
+            const uploadCard = document.getElementById('upload-card');
+            const processCard = document.getElementById('process-card');
+            const resultsContainer = document.getElementById('results-container');
+            const progressFill = document.getElementById('progress-fill');
+            const progressText = document.getElementById('progress-text');
+            const timeRemaining = document.getElementById('time-remaining');
+            const cancelProcessBtn = document.getElementById('cancel-process-btn');
+            const downloadReportBtn = document.getElementById('download-report-btn');
+            const startNewBtn = document.getElementById('start-new-btn');
+            const loadingOverlay = document.getElementById('loading-overlay');
+            const errorContainer = document.getElementById('error-container');
+            const errorMessage = document.getElementById('error-message');
+            
+            // Result elements
+            const engagementScore = document.getElementById('engagement-score');
+            const engagementFill = document.getElementById('engagement-fill');
+            const engagementRecommendation = document.getElementById('engagement-recommendation');
+            const eyeContactScore = document.getElementById('eye-contact-score');
+            const eyeContactFill = document.getElementById('eye-contact-fill');
+            const eyeContactRecommendation = document.getElementById('eye-contact-recommendation');
+            const heatmapImage = document.getElementById('heatmap-image');
+            const interviewerFocus = document.getElementById('interviewer-focus');
+            const screenFocus = document.getElementById('screen-focus');
+            const awayFocus = document.getElementById('away-focus');
+            const lookingUpStat = document.getElementById('looking-up-stat');
+            const lookingDownStat = document.getElementById('looking-down-stat');
+            const lookingLeftStat = document.getElementById('looking-left-stat');
+            const lookingRightStat = document.getElementById('looking-right-stat');
+            const predictionText = document.getElementById('prediction-text');
+            const confidenceText = document.getElementById('confidence-text');
+            const detailedFeedback = document.getElementById('detailed-feedback');
+            const recommendations = document.getElementById('recommendations');
+            
+            // Log DOM elements to console to verify they're being found
+            console.log('predictionText:', predictionText);
+            
+            // Step indicators
+            const step1 = document.getElementById('step1');
+            const step2 = document.getElementById('step2');
+            const step3 = document.getElementById('step3');
+            
+            // Processing icons
+            const faceDetectionIcon = document.getElementById('face-detection-icon');
+            const eyeTrackingIcon = document.getElementById('eye-tracking-icon');
+            const analyzingIcon = document.getElementById('analyzing-icon');
+            const generatingIcon = document.getElementById('generating-icon');
+            
+            // Add event listener for browse button
+            if (browseBtn) {
+                browseBtn.addEventListener('click', function(e) {
+                    console.log("Browse button clicked");
                     e.preventDefault();
-                    
-                    if (fileInput && fileInput.files.length > 0) {
-                        uploadFile(fileInput.files[0]);
-                    } else {
-                        alert('Please select a video file first.');
+                    if (fileInput) {
+                        fileInput.click();
                     }
                 });
             }
             
-            // Function to handle file upload
-            function uploadFile(file) {
-                // Show loading indicator (create one if you don't have it)
-                const loadingElement = document.getElementById('loading') || 
-                                      createLoadingElement();
-                loadingElement.style.display = 'block';
+            // Add event listener for file input change
+            if (fileInput) {
+                fileInput.addEventListener('change', function(e) {
+                    console.log("File input changed");
+                    handleFileSelect(e);
+                });
+            }
+            
+            // Add event listeners for drag and drop
+            if (dropArea) {
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                    dropArea.addEventListener(eventName, preventDefaults, false);
+                });
+                
+                function preventDefaults(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+                
+                // Highlight drop area when file is dragged over
+                dropArea.addEventListener('dragenter', function() {
+                    console.log("Drag enter");
+                    this.style.borderColor = '#3a86ff';
+                    this.style.backgroundColor = '#f0f7ff';
+                });
+                
+                dropArea.addEventListener('dragover', function() {
+                    console.log("Drag over");
+                    this.style.borderColor = '#3a86ff';
+                    this.style.backgroundColor = '#f0f7ff';
+                });
+                
+                dropArea.addEventListener('dragleave', function() {
+                    console.log("Drag leave");
+                    this.style.borderColor = '#e9ecef';
+                    this.style.backgroundColor = '';
+                });
+                
+                // Handle dropped files
+                dropArea.addEventListener('drop', function(e) {
+                    console.log("File dropped", e.dataTransfer.files);
+                    this.style.borderColor = '#e9ecef';
+                    this.style.backgroundColor = '';
+                    
+                    if (e.dataTransfer.files.length) {
+                        handleFiles(e.dataTransfer.files);
+                    }
+                });
+            }
+            
+            // Add event listener for cancel button
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', function() {
+                    console.log("Cancel button clicked");
+                    resetUpload();
+                });
+            }
+            
+            // Add event listener for form submission
+            if (uploadForm) {
+                uploadForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    console.log("Form submitted");
+                    
+                    if (fileInput && fileInput.files.length > 0) {
+                        startProcessing(fileInput.files[0]);
+                    } else {
+                        showError('Please select a video file first.');
+                    }
+                });
+            }
+            
+            if (cancelProcessBtn) {
+                cancelProcessBtn.addEventListener('click', function() {
+                    processCard.style.display = 'none';
+                    uploadCard.style.display = 'block';
+                    step2.classList.remove('active');
+                    step1.classList.add('active');
+                    resetProgress();
+                });
+            }
+            
+            if (downloadReportBtn) {
+                downloadReportBtn.addEventListener('click', function() {
+                    alert('Report downloading feature will be implemented in the next version.');
+                });
+            }
+            
+            if (startNewBtn) {
+                startNewBtn.addEventListener('click', function() {
+                    resultsContainer.style.display = 'none';
+                    uploadCard.style.display = 'block';
+                    step3.classList.remove('active');
+                    step1.classList.add('active');
+                    step2.classList.remove('completed');
+                    resetUpload();
+                });
+            }
+            
+            // Functions for handling file upload
+            function handleFileSelect(e) {
+                console.log("Handling file select", e);
+                const files = e.target.files;
+                handleFiles(files);
+            }
+            
+            function handleFiles(files) {
+                console.log("Handling files", files);
+                if (files.length > 0) {
+                    const file = files[0];
+                    
+                    // Check if it's a video
+                    if (!file.type.startsWith('video/')) {
+                        showError('Please select a video file.');
+                        return;
+                    }
+                    
+                    // Display file info
+                    fileName.textContent = file.name;
+                    fileSize.textContent = formatFileSize(file.size);
+                    
+                    dropArea.style.display = 'none';
+                    uploadInfo.style.display = 'block';
+                    if (errorContainer) errorContainer.style.display = 'none';
+                }
+            }
+            
+            function formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+            
+            function resetUpload() {
+                if (fileInput) fileInput.value = '';
+                dropArea.style.display = 'block';
+                uploadInfo.style.display = 'none';
+                if (errorContainer) errorContainer.style.display = 'none';
+            }
+            
+            function showError(message) {
+                if (errorContainer && errorMessage) {
+                    errorMessage.textContent = message;
+                    errorContainer.style.display = 'block';
+                } else {
+                    alert(message);
+                }
+            }
+            
+            function resetProgress() {
+                progressFill.style.width = '0%';
+                progressText.textContent = '0%';
+                timeRemaining.textContent = 'Estimating time...';
+                
+                faceDetectionIcon.className = 'fas fa-circle-notch fa-spin';
+                faceDetectionIcon.style.color = 'var(--primary)';
+                
+                eyeTrackingIcon.className = 'fas fa-circle';
+                eyeTrackingIcon.style.color = 'var(--lighter-gray)';
+                
+                analyzingIcon.className = 'fas fa-circle';
+                analyzingIcon.style.color = 'var(--lighter-gray)';
+                
+                generatingIcon.className = 'fas fa-circle';
+                generatingIcon.style.color = 'var(--lighter-gray)';
+            }
+            
+            function startProcessing(file) {
+                // Show loading overlay and processing UI
+                loadingOverlay.style.display = 'flex';
+                uploadCard.style.display = 'none';
+                processCard.style.display = 'block';
+                
+                // Update step indicators
+                step1.classList.remove('active');
+                step1.classList.add('completed');
+                step2.classList.add('active');
+                
+                // Start simulated progress animation
+                simulateProcessing();
                 
                 // Create FormData and append file
                 const formData = new FormData();
@@ -805,78 +831,207 @@
                     method: 'POST',
                     body: formData
                 })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Server responded with status: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
-                    // Hide loading indicator
-                    loadingElement.style.display = 'none';
+                    // Hide loading overlay and processing view
+                    loadingOverlay.style.display = 'none';
+                    processCard.style.display = 'none';
                     
-                    // Display results
-                    displayResults(data);
+                    // Handle errors in the response
+                    if (data.error) {
+                        showError(`Analysis failed: ${data.error}`);
+                        processCard.style.display = 'none';
+                        uploadCard.style.display = 'block';
+                        step2.classList.remove('active');
+                        step1.classList.add('active');
+                        step1.classList.remove('completed');
+                        return;
+                    }
+                    
+                    // Update the UI with the analysis results
+                    updateResults(data);
+                    
+                    // Show results
+                    resultsContainer.style.display = 'block';
+                    step2.classList.remove('active');
+                    step2.classList.add('completed');
+                    step3.classList.add('active');
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    loadingElement.style.display = 'none';
-                    alert('An error occurred during processing.');
+                    loadingOverlay.style.display = 'none';
+                    showError(`An error occurred: ${error.message}`);
+                    processCard.style.display = 'none';
+                    uploadCard.style.display = 'block';
+                    step2.classList.remove('active');
+                    step1.classList.add('active');
+                    step1.classList.remove('completed');
                 });
             }
             
-            // Function to create loading element if it doesn't exist
-            function createLoadingElement() {
-                const loadingElement = document.createElement('div');
-                loadingElement.id = 'loading';
-                loadingElement.innerHTML = 'Processing video, please wait...';
-                loadingElement.style.padding = '20px';
-                loadingElement.style.textAlign = 'center';
-                loadingElement.style.backgroundColor = '#f8f9fa';
-                loadingElement.style.border = '1px solid #ddd';
-                loadingElement.style.borderRadius = '4px';
-                loadingElement.style.margin = '20px 0';
-                loadingElement.style.display = 'none';
-                
-                // Add it to the page
-                document.body.appendChild(loadingElement);
-                return loadingElement;
-            }
-            
-            // Function to display results
-            function displayResults(data) {
-                // Find or create results container
-                let resultsElement = document.getElementById('results');
-                if (!resultsElement) {
-                    resultsElement = document.createElement('div');
-                    resultsElement.id = 'results';
-                    document.body.appendChild(resultsElement);
-                }
-                
-                // Clear previous results
-                resultsElement.innerHTML = '';
-                
-                // Check if there's an error
-                if (data.error) {
-                    resultsElement.innerHTML = `<div class="error">Error: ${data.error}</div>`;
-                    return;
-                }
-                
-                // Create results display - customize based on your data structure
-                let html = '<h2>Analysis Results</h2>';
-                
-                if (data.predictions) {
-                    html += '<h3>Predictions</h3><ul>';
+            function simulateProcessing() {
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += 1;
+                    updateProgress(progress);
                     
-                    for (let i = 0; i < data.predictions.length; i++) {
-                        let confidence = data.confidence_scores ? 
-                            ` (${(data.confidence_scores[i] * 100).toFixed(2)}%)` : '';
+                    if (progress === 30) {
+                        faceDetectionIcon.classList.remove('fa-spin', 'fa-circle-notch');
+                        faceDetectionIcon.classList.add('fa-check-circle');
+                        faceDetectionIcon.style.color = 'var(--success)';
                         
-                        html += `<li>${data.predictions[i]}${confidence}</li>`;
+                        eyeTrackingIcon.classList.remove('fa-circle');
+                        eyeTrackingIcon.classList.add('fa-circle-notch', 'fa-spin');
+                        eyeTrackingIcon.style.color = 'var(--primary)';
                     }
                     
-                    html += '</ul>';
-                }
+                    if (progress === 60) {
+                        eyeTrackingIcon.classList.remove('fa-spin', 'fa-circle-notch');
+                        eyeTrackingIcon.classList.add('fa-check-circle');
+                        eyeTrackingIcon.style.color = 'var(--success)';
+                        
+                        analyzingIcon.classList.remove('fa-circle');
+                        analyzingIcon.classList.add('fa-circle-notch', 'fa-spin');
+                        analyzingIcon.style.color = 'var(--primary)';
+                    }
+                    
+                    if (progress === 85) {
+                        analyzingIcon.classList.remove('fa-spin', 'fa-circle-notch');
+                        analyzingIcon.classList.add('fa-check-circle');
+                        analyzingIcon.style.color = 'var(--success)';
+                        
+                        generatingIcon.classList.remove('fa-circle');
+                        generatingIcon.classList.add('fa-circle-notch', 'fa-spin');
+                        generatingIcon.style.color = 'var(--primary)';
+                    }
+                    
+                    if (progress >= 100) {
+                        clearInterval(interval);
+                        generatingIcon.classList.remove('fa-spin', 'fa-circle-notch');
+                        generatingIcon.classList.add('fa-check-circle');
+                        generatingIcon.style.color = 'var(--success)';
+                    }
+                }, 50);
+            }
+            
+            function updateProgress(value) {
+                progressFill.style.width = `${value}%`;
+                progressText.textContent = `${value}%`;
                 
-                resultsElement.innerHTML = html;
-                resultsElement.style.display = 'block';
+                const remaining = Math.ceil((100 - value) / 10);
+                timeRemaining.textContent = value < 100 ? `Approximately ${remaining} seconds remaining...` : 'Complete!';
+            }
+            
+            function updateResults(data) {
+                console.log("Updating results with data:", data);
+                
+                try {
+                    // Update main prediction - FIX: Added proper error handling and null checks
+                    if (data.predictions && data.predictions.length > 0 && predictionText) {
+                        predictionText.innerHTML = `<strong>${data.predictions[0]}</strong>`;
+                        
+                        if (data.confidence_scores && data.confidence_scores.length > 0 && confidenceText) {
+                            const confidencePercent = Math.round(data.confidence_scores[0] * 100);
+                            confidenceText.textContent = `Confidence: ${confidencePercent}%`;
+                        }
+                    }
+                    
+                    // Update eye contact percentage
+                    if (data.eye_contact_percent !== undefined) {
+                        const eyeContactPercent = Math.round(data.eye_contact_percent);
+                        
+                        if (eyeContactScore) eyeContactScore.textContent = `${eyeContactPercent}%`;
+                        if (eyeContactFill) eyeContactFill.style.width = `${eyeContactPercent}%`;
+                        
+                        // Calculate engagement score based on eye contact percentage
+                        const engagementPercent = Math.min(100, Math.round(data.eye_contact_percent * 1.2));
+                        if (engagementScore) engagementScore.textContent = `${engagementPercent}%`;
+                        if (engagementFill) engagementFill.style.width = `${engagementPercent}%`;
+                        
+                        // Update recommendations
+                        if (data.feedback && detailedFeedback) {
+                            detailedFeedback.innerHTML = `<p>${data.feedback}</p>`;
+                        }
+                        
+                        // Generate recommendations based on eye contact percentage
+                        let recommendationText = '';
+                        
+                        if (eyeContactPercent > 80) {
+                            if (eyeContactRecommendation) eyeContactRecommendation.innerHTML = '<strong>Excellent!</strong> You maintained consistent eye contact throughout the interview.';
+                            if (engagementRecommendation) engagementRecommendation.innerHTML = '<strong>Great job!</strong> Your eye engagement showed strong interest in the conversation.';
+                            
+                            recommendationText = `
+                                <p><strong>Maintain your excellent eye contact habits.</strong> Your current level of eye contact shows confidence and engagement.</p>
+                                <p><strong>Use this strength in high-stakes situations.</strong> Your natural eye contact ability is an asset in interviews and presentations.</p>
+                            `;
+                        } else if (eyeContactPercent > 60) {
+                            if (eyeContactRecommendation) eyeContactRecommendation.innerHTML = '<strong>Good.</strong> You maintained consistent eye contact throughout most of the interview.';
+                            if (engagementRecommendation) engagementRecommendation.innerHTML = '<strong>Good engagement.</strong> Your eye contact showed interest in the conversation.';
+                            
+                            recommendationText = `
+                                <p><strong>Practice maintaining eye contact during complex answers.</strong> You tend to look away slightly when discussing challenging topics.</p>
+                                <p><strong>Build on your solid foundation.</strong> Your eye contact is already good, but can be further improved with conscious practice.</p>
+                            `;
+                        } else if (eyeContactPercent > 40) {
+                            if (eyeContactRecommendation) eyeContactRecommendation.innerHTML = '<strong>Fair.</strong> Your eye contact was inconsistent during the interview.';
+                            if (engagementRecommendation) engagementRecommendation.innerHTML = '<strong>Moderate engagement.</strong> Your eye contact showed varying levels of interest.';
+                            
+                            recommendationText = `
+                                <p><strong>Practice with recording sessions.</strong> Try recording yourself in mock interviews to become more aware of your eye contact patterns.</p>
+                                <p><strong>Reduce looking at notes or around the room.</strong> Focus on maintaining gaze with the interviewer even when thinking about answers.</p>
+                            `;
+                        } else {
+                            if (eyeContactRecommendation) eyeContactRecommendation.innerHTML = '<strong>Needs improvement.</strong> Your eye contact was minimal during the interview.';
+                            if (engagementRecommendation) engagementRecommendation.innerHTML = '<strong>Low engagement detected.</strong> Your eye contact patterns may indicate discomfort or distraction.';
+                            
+                            recommendationText = `
+                                <p><strong>Practice steady eye contact in daily conversations.</strong> Start with friends and family to build comfort with eye contact.</p>
+                                <p><strong>Consider anxiety reduction techniques.</strong> If eye contact causes discomfort, breathing exercises and interview preparation can help.</p>
+                                <p><strong>Set specific eye contact goals.</strong> Gradually increase your eye contact duration in conversations.</p>
+                            `;
+                        }
+                        
+                        if (recommendations) recommendations.innerHTML = recommendationText;
+                    }
+                    
+                    // Update focus distribution
+                    if (data.gaze_data_summary) {
+                        const lookingUpPercent = Math.round(data.gaze_data_summary.looking_up_percent || 0);
+                        const lookingDownPercent = Math.round(data.gaze_data_summary.looking_down_percent || 0);
+                        const lookingLeftPercent = Math.round(data.gaze_data_summary.looking_left_percent || 0);
+                        const lookingRightPercent = Math.round(data.gaze_data_summary.looking_right_percent || 0);
+                        
+                        if (lookingUpStat) lookingUpStat.innerHTML = `Looking Up: <strong>${lookingUpPercent}%</strong>`;
+                        if (lookingDownStat) lookingDownStat.innerHTML = `Looking Down: <strong>${lookingDownPercent}%</strong>`;
+                        if (lookingLeftStat) lookingLeftStat.innerHTML = `Looking Left: <strong>${lookingLeftPercent}%</strong>`;
+                        if (lookingRightStat) lookingRightStat.innerHTML = `Looking Right: <strong>${lookingRightPercent}%</strong>`;
+                        
+                        // Calculate focus distribution
+                        const centerFocusPercent = 100 - (lookingUpPercent + lookingDownPercent + lookingLeftPercent + lookingRightPercent);
+                        const notesFocusPercent = Math.round(lookingDownPercent * 0.8); // Assume 80% of looking down is at notes
+                        const awayFocusPercent = Math.round((lookingLeftPercent + lookingRightPercent) * 0.7); // Assume 70% of looking left/right is looking away
+                        
+                        if (interviewerFocus) interviewerFocus.textContent = `Interviewer's Face: ${Math.max(0, centerFocusPercent)}%`;
+                        if (screenFocus) screenFocus.textContent = `Screen/Notes: ${notesFocusPercent}%`;
+                        if (awayFocus) awayFocus.textContent = `Looking Away: ${awayFocusPercent}%`;
+                    }
+                    
+                    // Check if there's a heatmap image
+                    if (data.heatmap_path && heatmapImage) {
+                        const timestamp = new Date().getTime(); // Add timestamp to prevent caching
+                        heatmapImage.src = `/${data.heatmap_path}?t=${timestamp}`;
+                        heatmapImage.alt = "Eye Movement Heatmap";
+                    }
+                } catch (err) {
+                    console.error("Error updating results:", err);
+                    showError("An error occurred while displaying results: " + err.message);
+                }
             }
         });
     </script>
 </body>
-</html>
